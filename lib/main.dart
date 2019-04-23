@@ -95,64 +95,97 @@ class _SpringySliderState extends State<SpringySlider> {
   final double paddingBottom = 50.0;
 
   double sliderPercent = 0.50;
+  double startDragY;
+  double startDragPercent;
+
+  void _onPanStart(DragStartDetails details) {
+    startDragY = details.globalPosition.dy;
+    startDragPercent = sliderPercent;
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    final dragDistance = startDragY - details.globalPosition.dy;
+    final sliderHeight = context.size.height;
+    final dragPercent = dragDistance / sliderHeight;
+
+    setState(() {
+      sliderPercent = startDragPercent + dragPercent;
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
+      startDragY = null;
+      startDragPercent = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        SliderMarks(
-            markCount: widget.markCount,
-            color: widget.positiveColor,
-            paddingTop: paddingTop,
-            paddingBottom: paddingBottom),
-        ClipPath(
-          clipper: SliderClipper(),
-          child: Stack(
-            children: <Widget>[
-              Container(color: widget.positiveColor),
-              SliderMarks(
-                  markCount: widget.markCount,
-                  color: widget.negativeColor,
-                  paddingTop: paddingTop,
-                  paddingBottom: paddingBottom)
-            ],
+    return GestureDetector(
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: Stack(
+        children: <Widget>[
+          SliderMarks(
+              markCount: widget.markCount,
+              color: widget.positiveColor,
+              paddingTop: paddingTop,
+              paddingBottom: paddingBottom),
+          ClipPath(
+            clipper: SliderClipper(
+                sliderPercent: sliderPercent,
+                paddingTop: paddingTop,
+                paddingBottom: paddingBottom),
+            child: Stack(
+              children: <Widget>[
+                Container(color: widget.positiveColor),
+                SliderMarks(
+                    markCount: widget.markCount,
+                    color: widget.negativeColor,
+                    paddingTop: paddingTop,
+                    paddingBottom: paddingBottom)
+              ],
+            ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: paddingTop, bottom: paddingBottom),
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final height = constraints.maxHeight;
-              final sliderY = height * (1.0 - sliderPercent);
-              final pointsYouNeed = (100 * (1.0 - sliderPercent)).round();
-              final pointsYouHave = 100 - pointsYouNeed;
-              return Stack(children: <Widget>[
-                Positioned(
-                  left: 30.0,
-                  top: sliderY - 50.0,
-                  child: FractionalTranslation(
-                      translation: Offset(0.0, -1.0),
-                      child: Points(
-                        points: pointsYouNeed,
-                        isAboveSlider: true,
-                        isPointsYouNeed: true,
-                        color: Theme.of(context).primaryColor,
-                      )),
-                ),
-                Positioned(
-                  left: 30.0,
-                  top: sliderY + 50.0,
-                  child: Points(
-                    points: pointsYouHave,
-                    isAboveSlider: false,
-                    isPointsYouNeed: false,
-                    color: Theme.of(context).scaffoldBackgroundColor,
+          Padding(
+            padding: EdgeInsets.only(top: paddingTop, bottom: paddingBottom),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final height = constraints.maxHeight;
+                final sliderY = height * (1.0 - sliderPercent);
+                final pointsYouNeed = (100 * (1.0 - sliderPercent)).round();
+                final pointsYouHave = 100 - pointsYouNeed;
+                return Stack(children: <Widget>[
+                  Positioned(
+                    left: 30.0,
+                    top: sliderY - 50.0,
+                    child: FractionalTranslation(
+                        translation: Offset(0.0, -1.0),
+                        child: Points(
+                          points: pointsYouNeed,
+                          isAboveSlider: true,
+                          isPointsYouNeed: true,
+                          color: Theme.of(context).primaryColor,
+                        )),
                   ),
-                )
-              ]);
-            },
-          ),
-        )
-      ],
+                  Positioned(
+                    left: 30.0,
+                    top: sliderY + 50.0,
+                    child: Points(
+                      points: pointsYouHave,
+                      isAboveSlider: false,
+                      isPointsYouNeed: false,
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                    ),
+                  )
+                ]);
+              },
+            ),
+          )
+        ],
+      ),
     );
   }
 }
@@ -233,11 +266,23 @@ class SliderMarksPainter extends CustomPainter {
 }
 
 class SliderClipper extends CustomClipper<Path> {
+  final double sliderPercent;
+  final double paddingTop;
+  final double paddingBottom;
+
+  SliderClipper({this.sliderPercent, this.paddingTop, this.paddingBottom});
+
   @override
   Path getClip(Size size) {
     Path rect = Path();
-    rect.addRect(
-        Rect.fromLTWH(0.0, size.height / 2, size.width, size.height / 2));
+
+    final top = paddingTop;
+    final bottom = size.height;
+    final height = (bottom - paddingBottom) - top;
+    final percentFromBottom = 1.0 - sliderPercent;
+
+    rect.addRect(Rect.fromLTRB(
+        0.0, top + (percentFromBottom * height), size.width, bottom));
 
     return rect;
   }
