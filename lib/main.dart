@@ -130,25 +130,20 @@ class _SpringySliderState extends State<SpringySlider> {
         children: <Widget>[
           SliderMarks(
               markCount: widget.markCount,
-              color: widget.positiveColor,
+              markColor: widget.positiveColor,
+              backgroundColor: widget.negativeColor,
               paddingTop: paddingTop,
               paddingBottom: paddingBottom),
-          ClipPath(
-            clipper: SliderClipper(
-                sliderPercent: sliderPercent,
-                paddingTop: paddingTop,
-                paddingBottom: paddingBottom),
-            child: Stack(
-              children: <Widget>[
-                Container(color: widget.positiveColor),
-                SliderMarks(
-                    markCount: widget.markCount,
-                    color: widget.negativeColor,
-                    paddingTop: paddingTop,
-                    paddingBottom: paddingBottom)
-              ],
-            ),
-          ),
+          SliderGoo(
+              sliderPercent: sliderPercent,
+              paddingTop: paddingTop,
+              paddingBottom: paddingBottom,
+              child: SliderMarks(
+                  markCount: widget.markCount,
+                  markColor: widget.negativeColor,
+                  backgroundColor: widget.positiveColor,
+                  paddingTop: paddingTop,
+                  paddingBottom: paddingBottom)),
           Padding(
             padding: EdgeInsets.only(top: paddingTop, bottom: paddingBottom),
             child: LayoutBuilder(
@@ -190,21 +185,47 @@ class _SpringySliderState extends State<SpringySlider> {
   }
 }
 
+class SliderGoo extends StatelessWidget {
+  final double sliderPercent;
+  final double paddingTop;
+  final double paddingBottom;
+  final Widget child;
+
+  const SliderGoo(
+      {this.sliderPercent, this.paddingTop, this.paddingBottom, this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+        clipper: SliderClipper(
+            sliderPercent: sliderPercent,
+            paddingTop: paddingTop,
+            paddingBottom: paddingBottom),
+        child: child);
+  }
+}
+
 class SliderMarks extends StatelessWidget {
   final int markCount;
-  final Color color;
+  final Color markColor;
+  final Color backgroundColor;
   final double paddingTop;
   final double paddingBottom;
 
   SliderMarks(
-      {this.markCount, this.color, this.paddingTop, this.paddingBottom});
+      {this.markCount,
+      this.markColor,
+      this.backgroundColor,
+      this.paddingTop,
+      this.paddingBottom});
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: SliderMarksPainter(
           markCount: markCount,
-          color: color,
+          markColor: markColor,
+          backgroundColor: backgroundColor,
           markThickness: 2.0,
           paddingTop: paddingTop,
           paddingBottom: paddingBottom,
@@ -219,28 +240,36 @@ class SliderMarksPainter extends CustomPainter {
   final double smallMarkWidth = 10.0;
 
   final int markCount;
-  final Color color;
+  final Color markColor;
+  final Color backgroundColor;
   final double markThickness;
   final double paddingTop;
   final double paddingBottom;
   final double paddingRight;
   final Paint markPaint;
+  final Paint backgroundPaint;
 
   SliderMarksPainter(
       {this.markCount,
-      this.color,
+      this.markColor,
+      this.backgroundColor,
       this.markThickness,
       this.paddingTop,
       this.paddingBottom,
       this.paddingRight})
       : markPaint = Paint()
-          ..color = color
+          ..color = markColor
           ..strokeWidth = markThickness
           ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round;
+          ..strokeCap = StrokeCap.round,
+        backgroundPaint = Paint()
+          ..color = backgroundColor
+          ..style = PaintingStyle.fill;
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+        Rect.fromLTWH(0.0, 0.0, size.width, size.height), backgroundPaint);
     final paintHeight = size.height - paddingTop - paddingBottom;
     final gap = paintHeight / (markCount - 1);
 
